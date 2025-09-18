@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>👶🏻 Ranker 🥇</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
     <style>
         :root {
             --bg-color: #f4f7f6;
@@ -213,28 +214,16 @@
             font-size: 0.9em;
         }
 
-        /* --- Drag and Drop --- */
+        /* --- Drag and Drop from Sortable.js --- */
         .draggable-list li {
             cursor: grab;
         }
         
-        .draggable-list li.add-input {
-            cursor: default;
-        }
-        
-        .draggable-list li:active {
-            cursor: grabbing;
-        }
-        
-        .dragging {
+        .sortable-ghost {
             opacity: 0.5;
-            background: #cce5ff;
+            background-color: #cce5ff;
         }
         
-        .drag-over {
-            border-top: 2px solid var(--primary-color);
-        }
-
         /* --- Modal Styles --- */
         .modal {
             display: none;
@@ -362,7 +351,6 @@
             let masterList = [];
             let mumOrder = [];
             let dadOrder = [];
-            let dragStartIndex;
 
             // --- DOM ELEMENTS ---
             const editNamesButton = document.getElementById('editNamesButton');
@@ -394,7 +382,6 @@
                 list.forEach((item, index) => {
                     const li = document.createElement('li');
                     li.setAttribute('data-index', index);
-                    li.draggable = element.id !== 'modalList';
                     
                     const contentDiv = document.createElement('div');
                     contentDiv.className = 'list-item-content';
@@ -418,7 +405,6 @@
                     
                     element.appendChild(li);
                 });
-                updateDragListeners(element);
             }
 
             function renderFinalList(rankedItems) {
@@ -520,66 +506,31 @@
                 const isHidden = listElement.classList.toggle('hidden');
                 buttonElement.textContent = isHidden ? 'Show Ranking' : 'Hide Ranking';
             }
-
-            // --- DRAG & DROP LOGIC ---
-            function dragStart(e) {
-                dragStartIndex = +this.getAttribute('data-index');
-                e.target.classList.add('dragging');
-            }
-
-            function dragEnter(e) {
-                e.preventDefault();
-                this.classList.add('drag-over');
-            }
-
-            function dragLeave() {
-                this.classList.remove('drag-over');
-            }
-
-            function dragOver(e) {
-                e.preventDefault();
-            }
             
-            function dragDrop(e) {
-                e.preventDefault();
-                const dragEndIndex = +this.getAttribute('data-index');
-                const parentElement = this.parentElement;
-                this.classList.remove('drag-over');
-                
-                let listToUpdate;
-                if (parentElement.id === 'mumList') {
-                    listToUpdate = mumOrder;
-                } else if (parentElement.id === 'dadList') {
-                    listToUpdate = dadOrder;
-                } else {
-                    return;
-                }
+            // --- NEW SORTABLE.JS LOGIC ---
+            function initSortableLists() {
+                // Mum's List
+                new Sortable(mumList, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function (evt) {
+                        const [movedItem] = mumOrder.splice(evt.oldIndex, 1);
+                        mumOrder.splice(evt.newIndex, 0, movedItem);
+                        compareAndRank();
+                        renderList(mumOrder, mumList);
+                    }
+                });
 
-                const itemToMove = listToUpdate.splice(dragStartIndex, 1)[0];
-                listToUpdate.splice(dragEndIndex, 0, itemToMove);
-                
-                if (parentElement.id === 'mumList') {
-                    renderList(mumOrder, mumList);
-                } else {
-                    renderList(dadOrder, dadList);
-                }
-                
-                compareAndRank();
-            }
-
-            function dragEnd() {
-                this.classList.remove('dragging');
-            }
-            
-            function updateDragListeners(element) {
-                const draggables = element.querySelectorAll('li');
-                draggables.forEach(draggable => {
-                    draggable.addEventListener('dragstart', dragStart);
-                    draggable.addEventListener('dragenter', dragEnter);
-                    draggable.addEventListener('dragleave', dragLeave);
-                    draggable.addEventListener('dragover', dragOver);
-                    draggable.addEventListener('drop', dragDrop);
-                    draggable.addEventListener('dragend', dragEnd);
+                // Dad's List
+                new Sortable(dadList, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function (evt) {
+                        const [movedItem] = dadOrder.splice(evt.oldIndex, 1);
+                        dadOrder.splice(evt.newIndex, 0, movedItem);
+                        compareAndRank();
+                        renderList(dadOrder, dadList);
+                    }
                 });
             }
 
@@ -610,6 +561,7 @@
             // Initial render
             synchronizeLists();
             compareAndRank();
+            initSortableLists();
         });
     </script>
 </body>
